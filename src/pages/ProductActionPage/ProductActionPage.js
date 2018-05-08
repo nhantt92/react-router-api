@@ -1,6 +1,8 @@
 import React, { Component } from 'react';
-import callApi from './../../utils/apiCaller';
 import {Link} from 'react-router-dom';
+import { actAddProductRequest, actGetProductRequest, actUpdateProductRequest } from './../../actions/index';
+import { connect } from 'react-redux';
+
 class ProductActionPage extends Component {
     constructor(props){
         super(props);
@@ -13,18 +15,23 @@ class ProductActionPage extends Component {
     }
 
     componentDidMount(){
-        var {match} = this.props;
+        var { match }  = this.props;
         if(match){
             var id = match.params.id;
-            callApi(`products/${id}`,'GET', null).then(res=>{
-                var data = res.data;
-                this.setState({
-                    id: data.id,
-                    txtName: data.name,
-                    txtPrice: data.price,
-                    chkbStatus: data.status
-                })
-            })
+            this.props.onEditProduct(id);
+        }
+        
+    }
+
+    componentWillReceiveProps(nextProps){
+        if(nextProps && nextProps.itemEditting){
+            var { itemEditting } = nextProps;
+            this.setState({
+                id: itemEditting.id,
+                txtName: itemEditting.name,
+                txtPrice: itemEditting.price,
+                chkbStatus: itemEditting.status
+            });
         }
     }
 
@@ -41,22 +48,18 @@ class ProductActionPage extends Component {
         e.preventDefault();
         var { id, txtName, txtPrice, chkbStatus } = this.state;
         var {history} = this.props;
-        if(id){ //update
-            callApi(`products/${id}`, 'PUT', {
-                name: txtName,
-                price: txtPrice,
-                status: chkbStatus
-            }).then(res => {
-                history.goBack();
-            });
-        }else{
-        callApi('products', 'POST', {
+        var product = {
+            id: id,
             name: txtName,
             price: txtPrice,
             status: chkbStatus
-        }).then(res => {
-            history.goBack();
-        })}
+        };
+        if(id){ //update
+            this.props.onUpdateProduct(product);
+        }else{
+            this.props.onAddProduct(product);
+        }
+        history.goBack();
     }
 
     render() {
@@ -111,4 +114,24 @@ class ProductActionPage extends Component {
     }
 }
 
-export default ProductActionPage;
+const mapStateToProps = state => {
+    return {
+        itemEditting : state.itemEditting
+    }
+}
+
+const mapDispatchToProps = (dispatch, props) => {
+    return {
+        onAddProduct: (product) => {
+            dispatch(actAddProductRequest(product));
+        },
+        onEditProduct : (id) => {
+            dispatch(actGetProductRequest(id));
+        },
+        onUpdateProduct: (product) => {
+            dispatch(actUpdateProductRequest(product));
+        }
+    }
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(ProductActionPage);
